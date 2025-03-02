@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beautiful Chat Application with Channels & Login</title>
+  <style>
+    /* Login Container Styling */
+    .login-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      width: 300px;
+    }
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .login-form input, .login-form select, .login-form button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .login-form button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .login-form button:hover {
+      background-color: #45a049;
+    }
+
+    /* Overall Body Styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      background-color: #f5f5f5;
+    }
+
+    /* Sidebar Styling */
+    .sidebar {
+      width: 250px;
+      background-color: #fff;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .sidebar h3 {
+      margin-top: 0;
+    }
+    .channel-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .channel-item {
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      transition: background-color 0.2s;
+      position: relative;
+    }
+    .channel-item:hover {
+      background-color: #f0f0f0;
+    }
+    .channel-item.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .create-channel {
+      margin-top: 20px;
+    }
+    .create-channel input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .create-channel button {
+      width: 100%;
+      padding: 8px;
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .create-channel button:hover {
+      background-color: #45a049;
+    }
+
+    /* Chat Container Styling */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #fff;
+      position: relative;
+    }
+    .chat-header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      font-size: 18px;
+      border-bottom: 1px solid #ddd;
+      position: relative;
+    }
+    /* Hamburger Menu Styles */
+  #hamburger-menu {
+    cursor: pointer;
+    font-size: 30px; /* Increase size for more prominence */
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: white;
+    transition: transform 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for interaction */
+    padding: 10px; /* Add padding around the icon */
+    border-radius: 5px; /* Optional: rounded corners */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3); /* Subtle shadow for 3D effect */
+  }
+
+  #hamburger-menu:hover {
+    color: #ff6347; /* Change color on hover (Tomato color or any color you like) */
+    transform: scale(1.1); /* Slightly enlarge the icon when hovered */
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.5); /* Stronger shadow effect */
+  }
+
+  #hamburger-menu:active {
+    transform: scale(1.05); /* Slightly shrink when clicked for a pressed effect */
+  }
+
+  
+    /* Resource Menu Styles */
+    #resource-menu {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: white;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      padding: 10px;
+      border-radius: 4px;
+      z-index: 1001;
+    }
+    #resource-menu div {
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    #resource-menu div:last-child {
+      margin-bottom: 0;
+    }
+    /* Subpane container styling */
+    #subpane-container {
+      border: 1px solid #ddd;
+      margin: 10px;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    .chat-window {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+    .chat-message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .user-message {
+      background-color: #c8e6c9;
+      margin-left: auto;
+    }
+    .bot-message {
+      background-color: #bbdefb;
+    }
+    .chat-footer {
+      padding: 15px;
+      background-color: #fff;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+    }
+    .chat-footer input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      outline: none;
+    }
+    .chat-footer button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .chat-footer button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Container -->
+  <div class="login-container" id="login-container">
+    <form class="login-form" onsubmit="return handleLogin(event)">
+      <h2>UserName</h2>
+      <input type="text" id="username" placeholder="Enter username" required />
+      <select id="role" required>
+        <option value="">Select Role</option>
+        <option value="user" selected>Standard User</option>
+        <option value="coach">Coach</option>
+      </select>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar" style="display: none;">
+    <h3>Channels</h3>
+    <ul class="channel-list" id="channel-list"></ul>
+    <div class="create-channel" id="create-channel">
+      <input type="text" id="new-channel-input" placeholder="New channel name" />
+      <button onclick="createChannel()">Create Channel</button>
+    </div>
+  </div>
+
+  <!-- Chat Container -->
+  <div class="chat-container" id="chat-container" style="display: none;">
+    <div class="chat-header" id="chat-header">
+      <span id="channel-name">General</span>
+      <span id="hamburger-menu">&#9776;</span>
+    </div>
+    <!-- Resource Menu -->
+    <div id="resource-menu">
+      <div class="resource-item" data-resource="./htmlpages/questionnaire">Questionnaire</div>
+      <div class="resource-item" data-resource="./htmlpages/plotlycode2">PlotlyCode</div>
+      <div class="resource-item" data-resource="./htmlpages/dashboard">Dashboard</div>
+    </div>
+    <!-- Subpane Container: Loaded HTML from resource clicks appears here -->
+    <div id="subpane-container">
+        <iframe id="subpane-iframe" src="" frameborder="0" style="width:100%; height:300px;"></iframe>
+    </div>
+  
+
+
+    <div class="chat-window" id="chat-window"></div>
+    <div class="chat-footer">
+      <input type="text" id="message-input" placeholder="Type a message..." />
+      <button id="send-button">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // Global variables for current user, default channels, and active channel
+    let currentUser = null;
+    let channels = {
+      'General': [],
+      'Stocks101': [],
+      '300 to 579': [],
+      '580 to 669': [],
+      '670 to 739': [],
+      '740 to 799': [],
+      '800 to 850': []
+    };
+    let activeChannel = 'General';
+    let socket;
+
+    // Initialize channels in the sidebar
+    function initializeChannels() {
+      const channelList = document.getElementById('channel-list');
+      channelList.innerHTML = ''; // Clear any existing channels
+      for (let channelName in channels) {
+        const li = document.createElement('li');
+        li.className = 'channel-item';
+        
+        // Create a span to display the channel name
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = channelName;
+        li.appendChild(nameSpan);
+        
+        // If the current user is a coach, add an edit button next to the channel name.
+        if (currentUser && currentUser.role === 'coach') {
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Edit';
+          editBtn.style.marginLeft = '10px';
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newChannelName = prompt("Enter new channel name:", channelName);
+            if (newChannelName && newChannelName !== channelName) {
+              editChannel(channelName, newChannelName);
+            }
+          });
+          li.appendChild(editBtn);
+        }
+        
+        li.onclick = () => switchChannel(channelName);
+        channelList.appendChild(li);
+      }
+    }
+
+    // Function to perform local update and broadcast a channel edit.
+    function editChannel(oldChannel, newChannel) {
+      if (channels[newChannel]) {
+        alert("Channel name already exists!");
+        return;
+      }
+      channels[newChannel] = channels[oldChannel];
+      delete channels[oldChannel];
+      
+      if (activeChannel === oldChannel) {
+        activeChannel = newChannel;
+      }
+      initializeChannels();
+      switchChannel(newChannel);
+      
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        const editMessage = {
+          type: "editChannel",
+          oldChannel: oldChannel,
+          newChannel: newChannel,
+          sender: currentUser.username
+        };
+        socket.send(JSON.stringify(editMessage));
+      }
+    }
+
+    // Connect to the WebSocket server.
+    function connectWebSocket() {
+      socket = new WebSocket('wss://co-financier.glitch.me/');
+      socket.addEventListener('open', () => {
+        console.log("Connected to WebSocket server");
+        addMessage('Connected to WebSocket server', 'bot');
+      });
+      socket.addEventListener('message', (event) => {
+        try {
+          const msgData = JSON.parse(event.data);
+          if (msgData.type === "messageHistory") {
+            channels[msgData.channel] = msgData.messages;
+            if (activeChannel === msgData.channel) {
+              displayChannelMessages(msgData.channel);
+            }
+          } else if (msgData.type === "channel") {
+            if (!channels[msgData.channel]) {
+              channels[msgData.channel] = [];
+              initializeChannels();
+            }
+          } else if (msgData.type === "editChannel") {
+            const { oldChannel, newChannel } = msgData;
+            if (channels[oldChannel]) {
+              channels[newChannel] = channels[oldChannel];
+              delete channels[oldChannel];
+              if (activeChannel === oldChannel) {
+                activeChannel = newChannel;
+                displayChannelMessages(newChannel);
+                document.getElementById('chat-header').querySelector('#channel-name').textContent = newChannel;
+              }
+              initializeChannels();
+            }
+          } else if (msgData.type === "message") {
+            if (!channels[msgData.channel]) {
+              channels[msgData.channel] = [];
+            }
+            channels[msgData.channel].push({ content: msgData.content, sender: msgData.sender });
+            if (msgData.channel === activeChannel && msgData.sender !== currentUser.username) {
+              addMessage(`${msgData.sender}: ${msgData.content}`, 'bot');
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing message:", error);
+        }
+      });
+      socket.addEventListener('close', () => {
+        console.log("Disconnected from WebSocket server");
+        addMessage('Disconnected from WebSocket server', 'bot');
+      });
+    }
+
+    // Display messages for a channel in the chat window.
+    function displayChannelMessages(channelName) {
+      const chatWindow = document.getElementById('chat-window');
+      chatWindow.innerHTML = '';
+      if (channels[channelName]) {
+        channels[channelName].forEach(msg => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `chat-message ${msg.sender === currentUser.username ? 'user-message' : 'bot-message'}`;
+          messageDiv.textContent = `${msg.sender}: ${msg.content}`;
+          chatWindow.appendChild(messageDiv);
+        });
+      }
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Handle Login: hide login, show chat UI, initialize channels, and connect WebSocket.
+    function handleLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const role = document.getElementById('role').value;
+      if (username && role) {
+        currentUser = { username, role };
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('sidebar').style.display = 'block';
+        document.getElementById('chat-container').style.display = 'flex';
+        if (role !== 'coach') {
+          document.getElementById('create-channel').style.display = 'none';
+        }
+        initializeChannels();
+        switchChannel('General');
+        console.log("Connecting to WebSocket server");
+        connectWebSocket();
+      }
+      return false;
+    }
+
+    // Create a new channel (for coaches only) and broadcast it via WebSocket.
+    function createChannel() {
+      if (!currentUser || currentUser.role !== 'coach') return;
+      const channelName = document.getElementById('new-channel-input').value.trim();
+      if (channelName && !channels[channelName]) {
+        channels[channelName] = [];
+        initializeChannels();
+        switchChannel(channelName);
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          const channelMessage = {
+            type: "channel",
+            channel: channelName,
+            sender: currentUser.username
+          };
+          socket.send(JSON.stringify(channelMessage));
+        }
+        document.getElementById('new-channel-input').value = '';
+      }
+    }
+
+    // Switch active channel: update header, active styling, and load messages.
+    function switchChannel(channelName) {
+      activeChannel = channelName;
+      document.getElementById('chat-header').querySelector('#channel-name').textContent = channelName;
+      document.querySelectorAll('.channel-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.textContent.indexOf(channelName) === 0) {
+          item.classList.add('active');
+        }
+      });
+      const chatWindow = document.getElementById('chat-window');
+      chatWindow.innerHTML = '';
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'getMessages', channel: channelName }));
+      }
+    }
+
+    // Add a new message to the chat window.
+    function addMessage(content, senderType) {
+      const chatWindow = document.getElementById('chat-window');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `chat-message ${senderType === 'user' ? 'user-message' : 'bot-message'}`;
+      messageDiv.textContent = content;
+      chatWindow.appendChild(messageDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Send chat message on click of the Send button.
+    document.getElementById('send-button').addEventListener('click', () => {
+      const input = document.getElementById('message-input');
+      const message = input.value.trim();
+      if (message && socket && socket.readyState === WebSocket.OPEN) {
+        const msgData = {
+          type: "message",
+          content: message,
+          sender: currentUser.username,
+          channel: activeChannel
+        };
+        socket.send(JSON.stringify(msgData));
+        channels[activeChannel].push({ content: message, sender: currentUser.username });
+        addMessage(`You: ${message}`, 'user');
+        input.value = '';
+      }
+    });
+
+    // Allow sending message by pressing Enter.
+    document.getElementById('message-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('send-button').click();
+      }
+    });
+
+    // Toggle resource menu on hamburger menu click.
+    document.getElementById('hamburger-menu').addEventListener('click', () => {
+      const menu = document.getElementById('resource-menu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    });
+
+
+    // Function to load a subpane HTML file into the iframe based on the resource name.
+    function loadSubpane(resourceName) {
+    const subpaneUrl = resourceName + '.html';
+    document.getElementById("subpane-iframe").src = subpaneUrl;
+    }
+
+    // Attach click event listeners to each resource menu item.
+    document.querySelectorAll('.resource-item').forEach(item => {
+    item.addEventListener('click', function() {
+        const resourceName = this.getAttribute('data-resource');
+        loadSubpane(resourceName);
+    });
+    });
+
+  </script>
+</body>
+</html>
