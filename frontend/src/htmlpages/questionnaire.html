@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Credit Questionnaire Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .question-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+    .question-section h3, .question-section h2 { margin-top: 0; }
+    .answer-btn { 
+      display: block; width: 100%; text-align: left; margin: 8px 0; padding: 10px;
+      border: 1px solid #007BFF; background-color: #FFF; color: #007BFF;
+      border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease;
+    }
+    .answer-btn:hover { background-color: #007BFF; color: #FFF; }
+    .text-box { display: block; width: calc(100% - 20px); padding: 8px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+    .nav-buttons { margin-top: 20px; }
+    .nav-buttons button {
+      padding: 8px 12px; margin-right: 10px; border: none; background-color: #28A745;
+      color: #FFF; border-radius: 4px; cursor: pointer;
+    }
+    .nav-buttons button:hover { background-color: #218838; }
+  </style>
+</head>
+<body>
+  <!-- Introductory Section -->
+  <div id="intro">
+    <section class="question-section">
+      <h2>Welcome to the Credit Questionnaire!</h2>
+      <p>
+        Please answer the following questions regarding your credit history. Your responses are anonymous and will help us tailor our financial services.
+      </p>
+      <button id="startButton">Start Questionnaire</button>
+    </section>
+  </div>
+
+  <!-- Questionnaire Container -->
+  <div id="questionnaire"></div>
+
+  <script>
+    // Define the questionnaire data with 4 questions.
+    const questionnaireData = {
+      questions: [
+        {
+          id: "q1",
+          question: "1. How many credit cards do you have?",
+          options: [
+            { text: "I have never had a credit card", value: "none" },
+            { text: "1", value: "1" },
+            { text: "2 to 4", value: "2-4" },
+            { text: "5 or more", value: "5+" },
+            { text: "Other (please specify)", value: "other" }
+          ]
+        },
+        {
+          id: "q1a",
+          question: "1a. How long ago did you get your first credit card?",
+          options: [
+            { text: "less than 6 months ago", value: "<6m" },
+            { text: "between 6 months and 2 years ago", value: "6m-2y" },
+            { text: "2 to 4 years ago", value: "2-4y" },
+            { text: "4 to 5 years ago", value: "4-5y" },
+            { text: "5 to 8 years ago", value: "5-8y" },
+            { text: "8 to 10 years ago", value: "8-10y" },
+            { text: "10 to 15 years ago", value: "10-15y" },
+            { text: "15 to 20 years ago", value: "15-20y" },
+            { text: "more than 20 years ago", value: "20y+" }
+          ]
+        },
+        {
+          id: "q2",
+          question: "2. How long ago did you get your first loan? (i.e., auto loan, mortgage, student loan, etc.)",
+          options: [
+            { text: "I have never had a loan", value: "none" },
+            { text: "less than 6 months ago", value: "<6m" },
+            { text: "between 6 months and 2 years ago", value: "6m-2y" },
+            { text: "2 to 5 years ago", value: "2-5y" },
+            { text: "5 to 10 years ago", value: "5-10y" },
+            { text: "10 to 15 years ago", value: "10-15y" },
+            { text: "15 to 20 years ago", value: "15-20y" },
+            { text: "more than 20 years ago", value: "20y+" }
+          ]
+        },
+        {
+          id: "q3",
+          question: "3. Please provide any additional comments:",
+          entryField: true
+        }
+      ]
+    };
+
+    // Application state
+    let currentQuestionIndex = 0;
+    const questionnaireContainer = document.getElementById("questionnaire");
+    const responses = {};
+
+    // Render a question based on its index in the data.
+    function renderQuestion(index) {
+      questionnaireContainer.innerHTML = "";
+      const question = questionnaireData.questions[index];
+      
+      const section = document.createElement("section");
+      section.className = "question-section";
+
+      // Display the question title.
+      const title = document.createElement("h3");
+      title.textContent = question.question;
+      section.appendChild(title);
+
+      // If options exist, create a button for each.
+      if (question.options && question.options.length > 0) {
+        question.options.forEach(option => {
+          const btn = document.createElement("button");
+          btn.className = "answer-btn";
+          btn.textContent = option.text;
+          btn.onclick = () => handleAnswer(question.id, option.value, section);
+          section.appendChild(btn);
+        });
+      }
+
+      // If the question requires a free-text entry field, add it.
+      if (question.entryField) {
+        const input = document.createElement("input");
+        input.className = "text-box";
+        input.placeholder = "Your answer here...";
+        section.appendChild(input);
+
+        const submitBtn = document.createElement("button");
+        submitBtn.textContent = "Submit Answer";
+        submitBtn.onclick = () => {
+          responses[question.id] = input.value;
+          navigate(1);
+        };
+        section.appendChild(submitBtn);
+      }
+
+      // Navigation Controls (Back button, if needed).
+      const navDiv = document.createElement("div");
+      navDiv.className = "nav-buttons";
+      if (index > 0) {
+        const backBtn = document.createElement("button");
+        backBtn.textContent = "Back";
+        backBtn.onclick = () => navigate(-1);
+        navDiv.appendChild(backBtn);
+      }
+      section.appendChild(navDiv);
+
+      questionnaireContainer.appendChild(section);
+    }
+
+    // Handle answers for options, including an "Other" option that displays a text entry field.
+    function handleAnswer(questionId, value, section) {
+      if (value === "other") {
+        // Prevent duplicate entry fields if already added.
+        if (!section.querySelector(".text-box")) {
+          const input = document.createElement("input");
+          input.className = "text-box";
+          input.placeholder = "Please specify";
+          section.appendChild(input);
+
+          const submitBtn = document.createElement("button");
+          submitBtn.textContent = "Submit Answer";
+          submitBtn.onclick = () => {
+            responses[questionId] = input.value;
+            navigate(1);
+          };
+          section.appendChild(submitBtn);
+        }
+        return;
+      }
+      responses[questionId] = value;
+      navigate(1);
+    }
+
+    // Navigate to the next or previous question.
+    function navigate(direction) {
+      currentQuestionIndex += direction;
+      if (currentQuestionIndex >= questionnaireData.questions.length) {
+        showCompletion();
+      } else {
+        renderQuestion(currentQuestionIndex);
+      }
+    }
+
+    // Completion screen once the questionnaire is finished.
+    function showCompletion() {
+      questionnaireContainer.innerHTML = `
+        <div class="question-section">
+          <h3>Thank you for completing the questionnaire!</h3>
+          <p>Your responses have been recorded.</p>
+        </div>
+      `;
+      console.log("Collected Responses:", responses);
+    }
+
+    // Start the questionnaire when the Start button is clicked.
+    document.getElementById("startButton").onclick = function() {
+      document.getElementById("intro").style.display = "none";
+      renderQuestion(currentQuestionIndex);
+    };
+  </script>
+</body>
+</html>

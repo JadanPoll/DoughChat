@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dynamic Sunburst Chart</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+<h2>Dynamic Sunburst Chart</h2>
+<div id="chart" style="width: 600px; height: 600px;"></div>
+
+<script>
+function scaleParentValues(labels, parents, values) {
+    // Find top-level parents (direct children of 'Root' or '')
+    const parentSet = new Set(parents);
+    const rootChildren = labels.filter((label, i) => parents[i] === '');
+
+    // Sum the values of root children
+    const rootChildrenTotal = rootChildren.reduce((sum, child) => {
+        const index = labels.indexOf(child);
+        return sum + values[index];
+    }, 0);
+
+    // Scale root-level parents so they sum to 100
+    const scaledValues = [...values];  // Copy original values to modify
+    rootChildren.forEach(child => {
+        const index = labels.indexOf(child);
+        scaledValues[index] = (values[index] / rootChildrenTotal) * 100;
+    });
+
+    // No need to scale children further — they inherit ratios from parents
+    return scaledValues;
+}
+
+function renderSunburst(labels, parents, values) {
+    const scaledValues = scaleParentValues(labels, parents, values);
+
+    const data = [{
+        type: 'sunburst',
+        labels: labels,
+        parents: parents,
+        values: scaledValues,
+        branchvalues: 'total',  // Ensures children split parent’s value
+        textinfo: 'label+percent parent'
+    }];
+
+    const layout = {
+        title: 'Custom Sunburst Chart (Parents = 100%)',
+        margin: {t: 50, l: 20, r: 20, b: 20}
+    };
+
+    Plotly.newPlot('chart', data, layout);
+}
+
+// Example usage
+const labels = ['Root', 'Fruits', 'Vegetables', 'Apples', 'Bananas', 'Carrots', 'Broccoli'];
+const parents = ['', 'Root', 'Root', 'Fruits', 'Fruits', 'Vegetables', 'Vegetables'];
+const values = [150, 60, 40, 30, 30, 20, 20];  // Raw values
+
+  
+renderSunburst(labels, parents, values);
+</script>
+
+</body>
+</html>

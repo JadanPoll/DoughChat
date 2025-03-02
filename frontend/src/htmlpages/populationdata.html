@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Income Distribution Lookup</title>
+  <!-- Include Chart.js and the annotation plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 20px;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    label {
+      font-weight: bold;
+    }
+    select, button, input {
+      padding: 8px;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 300px;
+    }
+    #result {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      max-width: 600px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    #chart-section {
+      margin-top: 30px;
+      max-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Income Distribution Lookup</h1>
+  <p>
+    Select a state and county to retrieve household income distribution data.
+  </p>
+  
+  <!-- State Dropdown -->
+  <div>
+    <label for="state-select">Select State:</label>
+    <select id="state-select">
+      <option value="">--Select State--</option>
+      <!-- Options will be populated dynamically -->
+    </select>
+  </div>
+  
+  <!-- County Dropdown -->
+  <div>
+    <label for="county-select">Select County:</label>
+    <select id="county-select">
+      <option value="">--Select County--</option>
+    </select>
+  </div>
+  
+  <!-- Button to trigger the API request -->
+  <button id="get-income-btn">Get Income Distribution Data</button>
+  
+  <!-- Result display -->
+  <div id="result"></div>
+  
+  <!-- Chart and user income input section (hidden until data loads) -->
+  <div id="chart-section" style="display: none;">
+    <h3>Income Distribution Histogram</h3>
+    <canvas id="incomeChart" width="600" height="400"></canvas>
+    <div>
+      <label for="user-income">Enter your household income:</label>
+      <input type="number" id="user-income" placeholder="e.g. 45000" />
+      <button id="show-income">Show my position</button>
+    </div>
+  </div>
+  
+  <script>
+    // Populate state dropdown on page load using the Census API.
+    fetch('https://api.census.gov/data/2023/acs/acs5?get=NAME&for=state:*')
+      .then(response => response.json())
+      .then(data => {
+        const stateSelect = document.getElementById('state-select');
+        stateSelect.innerHTML = '<option value="">--Select State--</option>';
+        // Skip header row (data[0])
+        for (let i = 1; i < data.length; i++) {
+          const stateName = data[i][0];
+          const stateFips = data[i][1];
+          const option = document.createElement('option');
+          option.value = stateFips;
+          option.textContent = stateName;
+          stateSelect.appendChild(option);
+        }
+      })
+      .catch(error => console.error('Error fetching states:', error));
+    
+    // Populate county dropdown when a state is selected.
+    document.getElementById('state-select').addEventListener('change', function() {
+      const stateFips = this.value;
+      const countySelect = document.getElementById('county-select');
+      countySelect.innerHTML = '<option value="">--Select County--</option>';
+      if (stateFips) {
+        const countyUrl = `https://api.census.gov/data/2023/acs/acs5?get=NAME&for=county:*&in=state:${stateFips}`;
+        fetch(countyUrl)
+          .then(response => response.json())
+          .then(data => {
+            for (let i = 1; i < data.length; i++) {
+              const countyName = data[i][0];
+              const countyFips = data[i][2];
+              const option = document.createElement('option');
+              option.value = countyFips;
+              option.textContent = countyName;
+              countySelect.appendChild(option);
+            }
+          })
+          .catch(error => console.error('Error fetching counties:', error));
+      }
+    });
+    
+    let incomeChart; // Global Chart instance.
+    // Define bucket boundaries and labels.
+    // These boundaries match the ACS income buckets:
+    const bucketBounds = [
+      {min: 0, max: 10000},
+      {min: 10000, max: 15000},
+      {min: 15000, max: 20000},
+      {min: 20000, max: 25000},
+      {min: 25000, max: 30000},
+      {min: 30000, max: 35000},
+      {min: 35000, max: 40000},
+      {min: 40000, max: 45000},
+      {min: 45000, max: 50000},
+      {min: 50000, max: 60000},
+      {min: 60000, max: 75000},
+      {min: 75000, max: 100000},
+      {min: 100000, max: 125000},
+      {min: 125000, max: 150000},
+      {min: 150000, max: 200000},
+      {min: 200000, max: Infinity}
+    ];
+    const incomeBucketLabels = [
+      "Less than $10,000",
+      "$10,000 to $14,999",
+      "$15,000 to $19,999",
+      "$20,000 to $24,999",
+      "$25,000 to $29,999",
+      "$30,000 to $34,999",
+      "$35,000 to $39,999",
+      "$40,000 to $44,999",
+      "$45,000 to $49,999",
+      "$50,000 to $59,999",
+      "$60,000 to $74,999",
+      "$75,000 to $99,999",
+      "$100,000 to $124,999",
+      "$125,000 to $149,999",
+      "$150,000 to $199,999",
+      "$200,000 or more"
+    ];
+    
+    // Fetch income distribution data when the button is clicked.
+    document.getElementById('get-income-btn').addEventListener('click', function() {
+      const stateFips = document.getElementById('state-select').value;
+      const countyFips = document.getElementById('county-select').value;
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = ''; // Clear previous results
+      
+      if (!stateFips || !countyFips) {
+        resultDiv.textContent = 'Please select both a state and a county.';
+        return;
+      }
+      
+      // Build the API URL using ACS table B19001.
+      const apiUrl = `https://api.census.gov/data/2023/acs/acs5?get=NAME,B19001_001E,B19001_002E,B19001_003E,B19001_004E,B19001_005E,B19001_006E,B19001_007E,B19001_008E,B19001_009E,B19001_010E,B19001_011E,B19001_012E,B19001_013E,B19001_014E,B19001_015E,B19001_016E,B19001_017E&for=county:${countyFips}&in=state:${stateFips}`;
+      
+      fetch(apiUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.length < 2) {
+            resultDiv.textContent = 'No data found.';
+            return;
+          }
+          const headers = data[0];
+          const values = data[1];
+          const countyName = values[0];
+          const totalHouseholds = parseInt(values[1]);
+          
+          let output = `<h2>${countyName}</h2>`;
+          output += `<p><strong>Total Households:</strong> ${totalHouseholds.toLocaleString()}</p>`;
+          output += `<h3>Income Distribution</h3>`;
+          output += `<table>
+                      <thead>
+                        <tr>
+                          <th>Income Range</th>
+                          <th>Households</th>
+                        </tr>
+                      </thead>
+                      <tbody>`;
+          
+          let bucketCounts = [];
+          // Iterate through each income bucket.
+          for (let i = 0; i < incomeBucketLabels.length; i++) {
+            const bucketValue = parseInt(values[i + 2]);
+            bucketCounts.push(bucketValue);
+            output += `<tr>
+                        <td>${incomeBucketLabels[i]}</td>
+                        <td>${bucketValue.toLocaleString()}</td>
+                      </tr>`;
+          }
+          
+          output += `</tbody></table>`;
+          output += `<p><strong>State FIPS:</strong> ${values[18]} | <strong>County FIPS:</strong> ${values[19]}</p>`;
+          resultDiv.innerHTML = output;
+          
+          // Show the chart section.
+          document.getElementById('chart-section').style.display = 'block';
+          
+          // Create the histogram chart.
+          const ctx = document.getElementById('incomeChart').getContext('2d');
+          // Destroy previous chart instance if it exists.
+          if (incomeChart) {
+            incomeChart.destroy();
+          }
+          
+          incomeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: incomeBucketLabels,
+              datasets: [{
+                label: 'Households',
+                data: bucketCounts,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Household Income'
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Number of Households'
+                  }
+                }
+              },
+              plugins: {
+                annotation: {
+                  annotations: {}
+                }
+              }
+            }
+          });
+        })
+        .catch(error => {
+          resultDiv.textContent = 'Error fetching data: ' + error.message;
+        });
+    });
+    
+    // Event listener for the "Show my position" button.
+    document.getElementById('show-income').addEventListener('click', function() {
+      const incomeInput = document.getElementById('user-income').value;
+      const userIncome = parseFloat(incomeInput);
+      if (isNaN(userIncome)) {
+        alert('Please enter a valid number for your income.');
+        return;
+      }
+      
+      // Determine the bucket index where the user's income belongs.
+      let bucketIndex = bucketBounds.findIndex(b => userIncome >= b.min && userIncome < b.max);
+      if (bucketIndex === -1) {
+        bucketIndex = bucketBounds.length - 1;
+      }
+      
+      // Use the corresponding label as the x-axis value.
+      const annotationValue = incomeBucketLabels[bucketIndex];
+      
+      // Add/update the annotation for the user's income.
+      incomeChart.options.plugins.annotation.annotations.userLine = {
+        type: 'line',
+        mode: 'vertical',
+        scaleID: 'x',
+        value: annotationValue,
+        borderColor: 'red',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        label: {
+          enabled: true,
+          content: 'Your Income'
+        }
+      };
+      incomeChart.update();
+    });
+  </script>
+</body>
+</html>

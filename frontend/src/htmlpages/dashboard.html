@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <!-- You can remove axios script since we're using fetch -->
+</head>
+
+<body>
+
+  <h2>Register</h2>
+  
+  <form id="register-form">
+    <label for="email">Email:</label>
+    <input type="email" id="email" required /><br><br>
+    
+    <label for="password">Password:</label>
+    <input type="password" id="password" required /><br><br>
+
+    <button type="submit">Register</button>
+  </form>
+
+  <p>Already have an account? <a href="login.html">Login</a></p>
+
+  <script>
+    const SERVER_IP_ADDR = "http://3.145.180.241:3333"; // Replace with actual backend IP
+
+    // ✅ REGISTER FUNCTION
+    const registerUser = async (email, password) => {
+      try {
+        const bodyparam = {
+          email: email,
+          plaintext_password: password,
+        };
+
+        console.log("BODY: ", bodyparam);
+
+        const response = await fetch(`${SERVER_IP_ADDR}/user/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Ensure the body is sent as JSON
+          },
+          body: JSON.stringify(bodyparam), // Convert JavaScript object to JSON string
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to register user: " + response.statusText);
+        }
+
+        const data = await response.json();
+        console.log("User registered:", data);
+        return data; // Return data (e.g., JWT token)
+      } catch (error) {
+        console.error("Error registering user:", error.message || error);
+        throw new Error("Registration failed. Please try again.");
+      }
+    };
+
+    // ✅ LOGIN FUNCTION
+    const loginUser = async (name, password) => {
+      try {
+        const response = await fetch(`${SERVER_IP_ADDR}/user/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Ensure the body is sent as JSON
+          },
+          body: JSON.stringify({ name, password }), // Convert JavaScript object to JSON string
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to log in: " + response.statusText);
+        }
+
+        const token = await response.json(); // Get JWT token from response
+        localStorage.setItem("token", token); // Save token in local storage
+
+        console.log("User logged in:", token);
+
+        // redirect
+        return token;
+      } catch (error) {
+        console.error("Error logging in:", error.message || error);
+        alert("Invalid credentials. Check your email and password");
+      }
+    };
+
+    // Handle registration form submission
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+      e.preventDefault(); // Prevent form submission from refreshing the page
+
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        // Call the registerUser function from your embedded script
+        const response = await registerUser(email, password);
+        
+        // Handle successful registration (you can redirect to a login page or dashboard)
+        if (response) {
+          alert("Registration successful!");
+          // Optionally redirect after successful registration
+          window.location.href = "login.html";
+        }
+      } catch (error) {
+        alert("Registration failed. Please try again.");
+      }
+    });
+  </script>
+
+</body>
+
+</html>
