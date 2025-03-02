@@ -2,7 +2,9 @@
 
 ## FinLit Duolingo
 
-A comprehensive financial literacy learning platform.
+A comprehensive financial literacy learning platform. 
+Money is a very important way of communication understood by
+all the people's in the world so it's worth any study.
 
 🔗 [Visit DoughJo](https://co-financier.glitch.me/)
 
